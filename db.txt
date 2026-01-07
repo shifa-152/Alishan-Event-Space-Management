@@ -1,0 +1,5 @@
+Username
+pawaskarshifa70_db_user
+Password
+dqT4UP110Z8n0EGP
+connection string :mongodb+srv://pawaskarshifa70_db_user:<db_password>@cluster0.jwjrv5w.mongodb.net/?appName=Cluster0

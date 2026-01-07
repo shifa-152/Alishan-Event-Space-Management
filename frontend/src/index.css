@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* =============================
+   ALISHAN LUXURY THEME CSS
+============================= */
+
+body {
+  @apply bg-gradient-to-br from-[#f8f1e4] via-[#f3dfb2] to-[#e7c87a] text-[#3b2a14];
+  font-family: 'Poppins', sans-serif;
+}
+
+/* MAIN CONTAINER LOOK */
+.container-luxury {
+  @apply bg-[#fffaf0] rounded-[30px] p-8 border border-[#d4af37] shadow-2xl;
+}
+
+/* HEADINGS STYLE */
+.heading-luxury {
+  @apply text-center text-5xl font-extrabold tracking-widest text-[#b8860b] uppercase relative;
+}
+
+.heading-luxury::after {
+  content: "";
+  display: block;
+  width: 120px;
+  height: 3px;
+  background: linear-gradient(to right, transparent, #d4af37, transparent);
+  margin: 15px auto 0;
+}
+
+/* PREMIUM CARDS */
+.card-luxury {
+  @apply bg-gradient-to-br from-[#fff1c1] to-[#f0b233] rounded-2xl p-6 shadow-xl border border-[#d4af37] transition-transform duration-300;
+}
+
+.card-luxury:hover {
+  transform: translateY(-6px) scale(1.02);
+}
+
+/* GOLD BUTTON STYLE */
+.btn-gold {
+  @apply px-6 py-3 rounded-full font-semibold text-black bg-gradient-to-r from-[#ffd700] to-[#c79a21] shadow-lg transition-all duration-300;
+}
+
+.btn-gold:hover {
+  @apply scale-105 shadow-2xl;
+}
+
+.text-gold-soft {
+  color: #a87c2f;
+}
+
+.divider-gold {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #d4af37, transparent);
+  margin: 30px 0;
+}
+
+/* =============================
+   BOOKING FORM PREMIUM STYLING
+============================= */
+
+.booking-section {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 30px;
+  background: #000;
+  border: 1px solid gold;
+  border-radius: 20px;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.booking-title {
+  color: gold;
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 30px;
+  letter-spacing: 2px;
+}
+
+.booking-form-ui {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+}
+
+/* INPUT + SELECT FIXED VISIBILITY */
+.booking-form-ui input,
+.booking-form-ui select,
+.booking-form-ui textarea {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid gold;
+  background: #111;       /* DARK FIELD */
+  color: gold;            /* TEXT VISIBLE */
+  font-size: 16px;
+  transition: 0.3s ease;
+}
+
+/* PLACEHOLDER COLOR */
+.booking-form-ui input::placeholder,
+.booking-form-ui textarea::placeholder {
+  color: #aaa;
+}
+
+/* DATE INPUT FIX */
+.booking-form-ui input[type="date"] {
+  color-scheme: dark;
+}
+
+/* SELECT OPTIONS FIX */
+.booking-form-ui select option {
+  background: #111;
+  color: gold;
+}
+
+/* TEXTAREA */
+.full-width {
+  min-height: 100px;
+  resize: none;
+}
+
+/* FOCUS EFFECTS */
+.booking-form-ui input:focus,
+.booking-form-ui select:focus,
+.booking-form-ui textarea:focus {
+  outline: none;
+  border: 1px solid #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+}
+
+/* BOOK BUTTON */
+.book-btn {
+  background: linear-gradient(to right, gold, #d4af37);
+  color: black;
+  font-weight: bold;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: 0.3s ease;
+}
+
+.book-btn:hover {
+  transform: scale(1.03);
+  background: #e6b800;
+}
+
+/* MESSAGE */
+.form-message {
+  margin-top: 10px;
+  text-align: center;
+  font-weight: bold;
+  color: gold;
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 600px) {
+  .form-row {
+    flex-direction: column;
+  }
+}
+
+/* =============================
+   CALENDAR LUXURY STYLE
+============================= */
+
+.react-calendar {
+  background: #fffaf0 !important;
+  color: #5a3a13 !important;
+  border: 2px solid #d4af37 !important;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.react-calendar__tile {
+  background: transparent !important;
+  color: #5a3a13 !important;
+  border-radius: 10px;
+  transition: all 0.2s ease-in-out;
+}
+
+.react-calendar__tile:hover {
+  background: rgba(212,175,55,0.2) !important;
+  color: #3b2a14 !important;
+}
+
+.react-calendar__tile--active {
+  background: linear-gradient(135deg, #ffd700, #c79a21) !important;
+  color: #000 !important;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(212,175,55,0.8);
+}
+
+/* FOOTER LOOK */
+.footer-luxury {
+  @apply bg-[#fff3d6] rounded-xl p-6 shadow-md border border-[#d4af37] text-sm;
+}
