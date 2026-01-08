@@ -20,21 +20,54 @@ export default function AuthModal({ onClose }) {
     setName("");
     setPassword("");
     setOtp("");
-    setShowPassword(false);
     setOtpSent(false);
   }, [isLogin]);
 
-  const switchToLogin = () => setIsLogin(true);
-  const switchToRegister = () => setIsLogin(false);
+  /* ======================
+     VALIDATORS
+  ====================== */
+
+  const isValidName = (value) =>
+    /^[A-Za-z' ]+$/.test(value.trim());
+
+  const isValidEmail = (email) => {
+    if (!email) return false;
+    if (email.includes("..")) return false;
+    if (/\s/.test(email)) return false;
+
+    const emailRegex =
+      /^[a-zA-Z0-9]+([._%+-]?[a-zA-Z0-9]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+$/;
+
+    const localPart = email.split("@")[0];
+    if (localPart.startsWith(".") || localPart.endsWith(".")) return false;
+
+    return emailRegex.test(email);
+  };
+
+  const isValidPhone = (phone) =>
+    /^[6-9]\d{9}$/.test(phone);
+
+  const getIdentifierType = (value) => {
+    if (/^\d+$/.test(value)) return "phone";
+    if (value.includes("@")) return "email";
+    return "invalid";
+  };
 
   /* ======================
      OTP FLOW
   ====================== */
 
   const handleSendOtp = async () => {
-    if (!identifier.trim()) {
-      return toast.error("Enter email or phone");
-    }
+    const type = getIdentifierType(identifier.trim());
+
+    if (type === "email" && !isValidEmail(identifier))
+      return toast.error("Enter a valid email address");
+
+    if (type === "phone" && !isValidPhone(identifier))
+      return toast.error("Enter a valid 10-digit phone number");
+
+    if (type === "invalid")
+      return toast.error("Enter a valid email or phone number");
 
     try {
       setLoading(true);
@@ -42,7 +75,7 @@ export default function AuthModal({ onClose }) {
         identifier: identifier.trim(),
       });
       setOtpSent(true);
-      toast.success("OTP sent!");
+      toast.success("OTP sent successfully");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to send OTP");
     } finally {
@@ -62,17 +95,15 @@ export default function AuthModal({ onClose }) {
         name: isLogin ? undefined : name.trim(),
       });
 
-      // 🚫 BLOCK ADMIN FROM USER MODAL
       if (res.data.user.role === "admin") {
         toast.error("Please login from Admin Panel");
         return;
       }
 
-      // ✅ USER AUTH ONLY
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      toast.success("Login successful!");
+      toast.success("Login successful");
       onClose();
       window.location.href = "/";
     } catch (err) {
@@ -89,11 +120,24 @@ export default function AuthModal({ onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (useOtp) return handleVerifyOtp();
+    const type = getIdentifierType(identifier.trim());
 
-    if (!identifier.trim() || (!isLogin && !name.trim()) || !password.trim()) {
-      return toast.error("Fill all fields");
-    }
+    if (!isLogin && !isValidName(name))
+      return toast.error("Name can contain only alphabets, spaces and apostrophe");
+
+    if (type === "email" && !isValidEmail(identifier))
+      return toast.error("Enter a valid email address");
+
+    if (type === "phone" && !isValidPhone(identifier))
+      return toast.error("Enter a valid 10-digit phone number");
+
+    if (type === "invalid")
+      return toast.error("Enter a valid email or phone number");
+
+    if (!useOtp && password.length < 6)
+      return toast.error("Password must be at least 6 characters");
+
+    if (useOtp) return handleVerifyOtp();
 
     try {
       setLoading(true);
@@ -112,17 +156,15 @@ export default function AuthModal({ onClose }) {
 
       const res = await axios.post(url, payload);
 
-      // 🚫 BLOCK ADMIN FROM USER MODAL
       if (isLogin && res.data.user.role === "admin") {
         toast.error("Please login from Admin Panel");
         return;
       }
 
-      // ✅ USER AUTH ONLY
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      toast.success(isLogin ? "Login successful!" : "Registration successful!");
+      toast.success(isLogin ? "Login successful" : "Registration successful");
       onClose();
       window.location.href = "/";
     } catch (err) {
@@ -144,9 +186,6 @@ export default function AuthModal({ onClose }) {
         <h2 style={titleStyle}>
           {isLogin ? "Login to Aalishan Vibes" : "Create your account"}
         </h2>
-        <p style={subtitleStyle}>
-          {isLogin ? "Welcome back! Login below" : "Register to book your event"}
-        </p>
 
         <form onSubmit={handleSubmit} style={formStyle} autoComplete="off">
           {!isLogin && (
@@ -155,7 +194,6 @@ export default function AuthModal({ onClose }) {
               placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              required
               style={inputStyle}
             />
           )}
@@ -164,8 +202,7 @@ export default function AuthModal({ onClose }) {
             type="text"
             placeholder="Email or Phone"
             value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            required
+            onChange={(e) => setIdentifier(e.target.value.trim())}
             style={inputStyle}
           />
 
@@ -176,18 +213,13 @@ export default function AuthModal({ onClose }) {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
                 style={{ ...inputStyle, paddingRight: "40px" }}
               />
               <span
                 onClick={() => setShowPassword(!showPassword)}
                 style={eyeStyle}
               >
-                {showPassword ? (
-                  <EyeSlashIcon style={{ width: 20, height: 20 }} />
-                ) : (
-                  <EyeIcon style={{ width: 20, height: 20 }} />
-                )}
+                {showPassword ? <EyeSlashIcon width={20} /> : <EyeIcon width={20} />}
               </span>
             </div>
           )}
@@ -199,7 +231,6 @@ export default function AuthModal({ onClose }) {
                 placeholder="Enter OTP"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                required
                 style={inputStyle}
               />
               <button
@@ -234,116 +265,12 @@ export default function AuthModal({ onClose }) {
 
         <p style={switchTextStyle}>
           {isLogin ? (
-            <>
-              Don’t have an account?{" "}
-              <button onClick={switchToRegister} style={linkStyle}>
-                Register
-              </button>
-            </>
+            <>Don’t have an account? <button onClick={() => setIsLogin(false)} style={linkStyle}>Register</button></>
           ) : (
-            <>
-              Already have an account?{" "}
-              <button onClick={switchToLogin} style={linkStyle}>
-                Login
-              </button>
-            </>
+            <>Already have an account? <button onClick={() => setIsLogin(true)} style={linkStyle}>Login</button></>
           )}
         </p>
       </div>
     </div>
   );
 }
-
-/* ======================
-   STYLES
-====================== */
-
-const overlayStyle = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 1000,
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "rgba(0,0,0,0.7)",
-  backdropFilter: "blur(4px)",
-};
-
-const modalStyle = {
-  background: "#fff",
-  width: "90%",
-  maxWidth: "400px",
-  borderRadius: "12px",
-  padding: "24px",
-  position: "relative",
-  boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-};
-
-const closeBtnStyle = {
-  position: "absolute",
-  top: "12px",
-  right: "12px",
-  border: "none",
-  background: "transparent",
-  fontSize: "20px",
-  cursor: "pointer",
-};
-
-const titleStyle = {
-  textAlign: "center",
-  fontSize: "24px",
-  fontWeight: "bold",
-};
-
-const subtitleStyle = {
-  textAlign: "center",
-  color: "#555",
-  marginBottom: "16px",
-};
-
-const formStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "12px",
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "10px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-  fontSize: "14px",
-};
-
-const eyeStyle = {
-  position: "absolute",
-  right: "10px",
-  top: "50%",
-  transform: "translateY(-50%)",
-  cursor: "pointer",
-  color: "#555",
-};
-
-const btnStyle = {
-  padding: "10px",
-  borderRadius: "6px",
-  border: "none",
-  backgroundColor: "#111",
-  color: "#fff",
-  fontSize: "16px",
-  cursor: "pointer",
-};
-
-const switchTextStyle = {
-  textAlign: "center",
-  marginTop: "12px",
-  fontSize: "14px",
-};
-
-const linkStyle = {
-  color: "#2563eb",
-  fontWeight: "500",
-  cursor: "pointer",
-  border: "none",
-  background: "transparent",
-};

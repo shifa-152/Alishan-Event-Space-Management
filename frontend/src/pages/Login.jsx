@@ -10,15 +10,26 @@ export default function Login() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const isValidEmail = (value) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  const isValidEmail = (email) => {
+    if (!email) return false;
+    if (/\s/.test(email)) return false;
+    if (email.includes("..")) return false;
+
+    const emailRegex =
+      /^[a-zA-Z0-9]+([._%+-]?[a-zA-Z0-9]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+$/;
+
+    const [localPart] = email.split("@");
+    if (localPart.startsWith(".") || localPart.endsWith(".")) return false;
+
+    return emailRegex.test(email);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
 
     if (!isValidEmail(email)) {
-      return setError("Please enter a valid email");
+      return setError("Enter a valid email address");
     }
 
     if (password.length < 6) {
@@ -28,7 +39,7 @@ export default function Login() {
     try {
       const res = await axios.post(
         "http://localhost:5000/api/auth/login",
-        { email, password }
+        { email: email.trim(), password }
       );
 
       localStorage.setItem("token", res.data.token);
@@ -48,10 +59,10 @@ export default function Login() {
         {error && <div style={errorStyle}>{error}</div>}
 
         <input
-          type="email"
+          type="text"
           placeholder="Email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value.toLowerCase().trim())}
           style={inputStyle}
           required
         />
@@ -69,11 +80,7 @@ export default function Login() {
             onClick={() => setShowPassword(!showPassword)}
             style={eyeIconStyle}
           >
-            {showPassword ? (
-              <EyeSlashIcon style={{ width: 20 }} />
-            ) : (
-              <EyeIcon style={{ width: 20 }} />
-            )}
+            {showPassword ? <EyeSlashIcon width={20} /> : <EyeIcon width={20} />}
           </span>
         </div>
 
