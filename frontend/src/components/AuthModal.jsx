@@ -4,6 +4,17 @@ import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
 import { toast } from "react-hot-toast";
 import { API_BASE_URL } from "../config";
 
+/* ======================
+   VALIDATION HELPERS
+====================== */
+
+const emailRegex =
+  /^(?!.*\.\.)[a-zA-Z0-9]+([._%+-]?[a-zA-Z0-9]+)*@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
+
+const phoneRegex = /^[6-9]\d{9}$/;
+
+const nameRegex = /^[A-Za-z ]+$/;
+
 export default function AuthModal({ onClose }) {
   const [isLogin, setIsLogin] = useState(true);
   const [identifier, setIdentifier] = useState("");
@@ -20,54 +31,25 @@ export default function AuthModal({ onClose }) {
     setName("");
     setPassword("");
     setOtp("");
+    setShowPassword(false);
     setOtpSent(false);
   }, [isLogin]);
 
-  /* ======================
-     VALIDATORS
-  ====================== */
-
-  const isValidName = (value) =>
-    /^[A-Za-z' ]+$/.test(value.trim());
-
-  const isValidEmail = (email) => {
-    if (!email) return false;
-    if (email.includes("..")) return false;
-    if (/\s/.test(email)) return false;
-
-    const emailRegex =
-      /^[a-zA-Z0-9]+([._%+-]?[a-zA-Z0-9]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+$/;
-
-    const localPart = email.split("@")[0];
-    if (localPart.startsWith(".") || localPart.endsWith(".")) return false;
-
-    return emailRegex.test(email);
-  };
-
-  const isValidPhone = (phone) =>
-    /^[6-9]\d{9}$/.test(phone);
-
-  const getIdentifierType = (value) => {
-    if (/^\d+$/.test(value)) return "phone";
-    if (value.includes("@")) return "email";
-    return "invalid";
-  };
+  const isEmail = emailRegex.test(identifier.trim());
+  const isPhone = phoneRegex.test(identifier.trim());
 
   /* ======================
      OTP FLOW
   ====================== */
 
   const handleSendOtp = async () => {
-    const type = getIdentifierType(identifier.trim());
+    if (!identifier.trim()) {
+      return toast.error("Enter email or phone number");
+    }
 
-    if (type === "email" && !isValidEmail(identifier))
-      return toast.error("Enter a valid email address");
-
-    if (type === "phone" && !isValidPhone(identifier))
-      return toast.error("Enter a valid 10-digit phone number");
-
-    if (type === "invalid")
-      return toast.error("Enter a valid email or phone number");
+    if (!isEmail && !isPhone) {
+      return toast.error("Enter a valid email or 10-digit phone number");
+    }
 
     try {
       setLoading(true);
@@ -120,24 +102,29 @@ export default function AuthModal({ onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const type = getIdentifierType(identifier.trim());
-
-    if (!isLogin && !isValidName(name))
-      return toast.error("Name can contain only alphabets, spaces and apostrophe");
-
-    if (type === "email" && !isValidEmail(identifier))
-      return toast.error("Enter a valid email address");
-
-    if (type === "phone" && !isValidPhone(identifier))
-      return toast.error("Enter a valid 10-digit phone number");
-
-    if (type === "invalid")
-      return toast.error("Enter a valid email or phone number");
-
-    if (!useOtp && password.length < 6)
-      return toast.error("Password must be at least 6 characters");
-
     if (useOtp) return handleVerifyOtp();
+
+    if (!identifier.trim()) {
+      return toast.error("Email or phone is required");
+    }
+
+    if (!isEmail && !isPhone) {
+      return toast.error("Enter a valid email or phone number");
+    }
+
+    if (!isLogin) {
+      if (!name.trim()) return toast.error("Name is required");
+      if (!nameRegex.test(name.trim()))
+        return toast.error("Name must contain only alphabets and spaces");
+    }
+
+    if (!password.trim()) {
+      return toast.error("Password is required");
+    }
+
+    if (password.length < 6) {
+      return toast.error("Password must be at least 6 characters");
+    }
 
     try {
       setLoading(true);
@@ -202,7 +189,7 @@ export default function AuthModal({ onClose }) {
             type="text"
             placeholder="Email or Phone"
             value={identifier}
-            onChange={(e) => setIdentifier(e.target.value.trim())}
+            onChange={(e) => setIdentifier(e.target.value)}
             style={inputStyle}
           />
 
@@ -245,13 +232,7 @@ export default function AuthModal({ onClose }) {
           )}
 
           <button type="submit" style={btnStyle} disabled={loading}>
-            {loading
-              ? "Processing..."
-              : useOtp
-              ? "Verify OTP"
-              : isLogin
-              ? "Login"
-              : "Register"}
+            {loading ? "Processing..." : useOtp ? "Verify OTP" : isLogin ? "Login" : "Register"}
           </button>
         </form>
 
@@ -274,3 +255,82 @@ export default function AuthModal({ onClose }) {
     </div>
   );
 }
+
+/* ======================
+   STYLES (FIXED)
+====================== */
+
+const overlayStyle = {
+  position: "fixed",
+  inset: 0,
+  backgroundColor: "rgba(0,0,0,0.6)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 1000,
+};
+
+const modalStyle = {
+  background: "#fff",
+  padding: "24px",
+  borderRadius: "12px",
+  width: "90%",
+  maxWidth: "400px",
+  position: "relative",
+};
+
+const closeBtnStyle = {
+  position: "absolute",
+  top: 10,
+  right: 10,
+  border: "none",
+  background: "transparent",
+  fontSize: "20px",
+  cursor: "pointer",
+};
+
+const titleStyle = {
+  textAlign: "center",
+  marginBottom: "16px",
+};
+
+const formStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+};
+
+const inputStyle = {
+  padding: "10px",
+  borderRadius: "6px",
+  border: "1px solid #ccc",
+};
+
+const eyeStyle = {
+  position: "absolute",
+  right: 10,
+  top: "50%",
+  transform: "translateY(-50%)",
+  cursor: "pointer",
+};
+
+const btnStyle = {
+  padding: "10px",
+  background: "#111",
+  color: "#fff",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+};
+
+const switchTextStyle = {
+  textAlign: "center",
+  marginTop: "12px",
+};
+
+const linkStyle = {
+  border: "none",
+  background: "transparent",
+  color: "#2563eb",
+  cursor: "pointer",
+};
