@@ -5,14 +5,11 @@ import { toast } from "react-hot-toast";
 import { API_BASE_URL } from "../config";
 
 /* ======================
-   VALIDATION HELPERS
+   REGEX
 ====================== */
-
 const emailRegex =
   /^(?!.*\.\.)[a-zA-Z0-9]+([._%+-]?[a-zA-Z0-9]+)*@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/;
-
 const phoneRegex = /^[6-9]\d{9}$/;
-
 const nameRegex = /^[A-Za-z ]+$/;
 
 export default function AuthModal({ onClose }) {
@@ -21,109 +18,69 @@ export default function AuthModal({ onClose }) {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [useOtp, setUseOtp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [useOtp, setUseOtp] = useState(false);
+
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    setErrors({});
     setIdentifier("");
     setName("");
     setPassword("");
     setOtp("");
-    setShowPassword(false);
-    setOtpSent(false);
+    setUseOtp(false);
   }, [isLogin]);
 
-  const isEmail = emailRegex.test(identifier.trim());
-  const isPhone = phoneRegex.test(identifier.trim());
-
   /* ======================
-     OTP FLOW
+     VALIDATION FUNCTIONS
   ====================== */
 
-  const handleSendOtp = async () => {
-    if (!identifier.trim()) {
-      return toast.error("Enter email or phone number");
-    }
-
-    if (!isEmail && !isPhone) {
-      return toast.error("Enter a valid email or 10-digit phone number");
-    }
-
-    try {
-      setLoading(true);
-      await axios.post(`${API_BASE_URL}/auth/send-otp`, {
-        identifier: identifier.trim(),
-      });
-      setOtpSent(true);
-      toast.success("OTP sent successfully");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to send OTP");
-    } finally {
-      setLoading(false);
-    }
+  const validateIdentifier = (value) => {
+    if (!value.trim()) return "Email or phone is required";
+    if (!emailRegex.test(value) && !phoneRegex.test(value))
+      return "Enter a valid email or 10-digit phone number";
+    return "";
   };
 
-  const handleVerifyOtp = async () => {
-    if (!otp.trim()) return toast.error("Enter OTP");
+  const validateName = (value) => {
+    if (!value.trim()) return "Name is required";
+    if (!nameRegex.test(value))
+      return "Name must contain only alphabets and spaces";
+    return "";
+  };
 
-    try {
-      setLoading(true);
-
-      const res = await axios.post(`${API_BASE_URL}/auth/verify-otp`, {
-        identifier: identifier.trim(),
-        otp: otp.trim(),
-        name: isLogin ? undefined : name.trim(),
-      });
-
-      if (res.data.user.role === "admin") {
-        toast.error("Please login from Admin Panel");
-        return;
-      }
-
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      toast.success("Login successful");
-      onClose();
-      window.location.href = "/";
-    } catch (err) {
-      toast.error(err.response?.data?.message || "OTP verification failed");
-    } finally {
-      setLoading(false);
-    }
+  const validatePassword = (value) => {
+    if (!value.trim()) return "Password is required";
+    if (value.length < 6)
+      return "Password must be at least 6 characters";
+    return "";
   };
 
   /* ======================
-     PASSWORD LOGIN / REGISTER
+     SUBMIT
   ====================== */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (useOtp) return handleVerifyOtp();
+    let newErrors = {};
 
-    if (!identifier.trim()) {
-      return toast.error("Email or phone is required");
-    }
+    newErrors.identifier = validateIdentifier(identifier);
+    if (!isLogin) newErrors.name = validateName(name);
+    if (!useOtp) newErrors.password = validatePassword(password);
 
-    if (!isEmail && !isPhone) {
-      return toast.error("Enter a valid email or phone number");
-    }
+    Object.keys(newErrors).forEach(
+      (k) => !newErrors[k] && delete newErrors[k]
+    );
 
-    if (!isLogin) {
-      if (!name.trim()) return toast.error("Name is required");
-      if (!nameRegex.test(name.trim()))
-        return toast.error("Name must contain only alphabets and spaces");
-    }
+    setErrors(newErrors);
 
-    if (!password.trim()) {
-      return toast.error("Password is required");
-    }
-
-    if (password.length < 6) {
-      return toast.error("Password must be at least 6 characters");
+    if (Object.keys(newErrors).length) {
+      toast.error("Please fix the highlighted errors");
+      return;
     }
 
     try {
@@ -134,17 +91,13 @@ export default function AuthModal({ onClose }) {
         : `${API_BASE_URL}/auth/register`;
 
       const payload = isLogin
-        ? { identifier: identifier.trim(), password: password.trim() }
-        : {
-            name: name.trim(),
-            identifier: identifier.trim(),
-            password: password.trim(),
-          };
+        ? { identifier, password }
+        : { name, identifier, password };
 
       const res = await axios.post(url, payload);
 
-      if (isLogin && res.data.user.role === "admin") {
-        toast.error("Please login from Admin Panel");
+      if (res.data.user.role === "admin") {
+        toast.error("Admin login not allowed here");
         return;
       }
 
@@ -171,84 +124,80 @@ export default function AuthModal({ onClose }) {
         <button onClick={onClose} style={closeBtnStyle}>✕</button>
 
         <h2 style={titleStyle}>
-          {isLogin ? "Login to Aalishan Vibes" : "Create your account"}
+          {isLogin ? "Login" : "Register"}
         </h2>
 
-        <form onSubmit={handleSubmit} style={formStyle} autoComplete="off">
+        <form onSubmit={handleSubmit} style={formStyle} noValidate>
           {!isLogin && (
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={inputStyle}
-            />
-          )}
-
-          <input
-            type="text"
-            placeholder="Email or Phone"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            style={inputStyle}
-          />
-
-          {!useOtp && (
-            <div style={{ position: "relative" }}>
-              <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={{ ...inputStyle, paddingRight: "40px" }}
-              />
-              <span
-                onClick={() => setShowPassword(!showPassword)}
-                style={eyeStyle}
-              >
-                {showPassword ? <EyeSlashIcon width={20} /> : <EyeIcon width={20} />}
-              </span>
-            </div>
-          )}
-
-          {useOtp && (
             <>
               <input
-                type="text"
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                style={inputStyle}
+                style={input(errors.name)}
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setErrors({ ...errors, name: validateName(e.target.value) });
+                }}
               />
-              <button
-                type="button"
-                onClick={handleSendOtp}
-                style={btnStyle}
-                disabled={loading || otpSent}
-              >
-                {otpSent ? "OTP Sent" : "Send OTP"}
-              </button>
+              {errors.name && <span style={errorText}>{errors.name}</span>}
             </>
           )}
 
-          <button type="submit" style={btnStyle} disabled={loading}>
-            {loading ? "Processing..." : useOtp ? "Verify OTP" : isLogin ? "Login" : "Register"}
+          <input
+            style={input(errors.identifier)}
+            placeholder="Email or Phone"
+            value={identifier}
+            onChange={(e) => {
+              setIdentifier(e.target.value);
+              setErrors({
+                ...errors,
+                identifier: validateIdentifier(e.target.value),
+              });
+            }}
+          />
+          {errors.identifier && (
+            <span style={errorText}>{errors.identifier}</span>
+          )}
+
+          {!useOtp && (
+            <>
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  style={input(errors.password)}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setErrors({
+                      ...errors,
+                      password: validatePassword(e.target.value),
+                    });
+                  }}
+                />
+                <span
+                  style={eyeStyle}
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeSlashIcon width={18} /> : <EyeIcon width={18} />}
+                </span>
+              </div>
+              {errors.password && (
+                <span style={errorText}>{errors.password}</span>
+              )}
+            </>
+          )}
+
+          <button disabled={loading} style={btnStyle}>
+            {loading ? "Processing..." : isLogin ? "Login" : "Register"}
           </button>
         </form>
 
-        {isLogin && (
-          <p style={switchTextStyle}>
-            <button onClick={() => setUseOtp(!useOtp)} style={linkStyle}>
-              {useOtp ? "Login with Password" : "Login with OTP"}
-            </button>
-          </p>
-        )}
-
         <p style={switchTextStyle}>
           {isLogin ? (
-            <>Don’t have an account? <button onClick={() => setIsLogin(false)} style={linkStyle}>Register</button></>
+            <>No account? <button onClick={() => setIsLogin(false)} style={linkStyle}>Register</button></>
           ) : (
-            <>Already have an account? <button onClick={() => setIsLogin(true)} style={linkStyle}>Login</button></>
+            <>Have account? <button onClick={() => setIsLogin(true)} style={linkStyle}>Login</button></>
           )}
         </p>
       </div>
@@ -257,80 +206,48 @@ export default function AuthModal({ onClose }) {
 }
 
 /* ======================
-   STYLES (FIXED)
+   STYLES
 ====================== */
 
 const overlayStyle = {
   position: "fixed",
   inset: 0,
-  backgroundColor: "rgba(0,0,0,0.6)",
+  background: "rgba(0,0,0,0.6)",
   display: "flex",
-  justifyContent: "center",
   alignItems: "center",
-  zIndex: 1000,
+  justifyContent: "center",
 };
 
 const modalStyle = {
   background: "#fff",
-  padding: "24px",
-  borderRadius: "12px",
-  width: "90%",
-  maxWidth: "400px",
-  position: "relative",
+  padding: 24,
+  borderRadius: 12,
+  width: 380,
 };
 
-const closeBtnStyle = {
-  position: "absolute",
-  top: 10,
-  right: 10,
-  border: "none",
-  background: "transparent",
-  fontSize: "20px",
-  cursor: "pointer",
-};
+const input = (error) => ({
+  padding: 10,
+  borderRadius: 6,
+  border: error ? "1px solid red" : "1px solid #ccc",
+  width: "100%",
+});
 
-const titleStyle = {
-  textAlign: "center",
-  marginBottom: "16px",
-};
-
-const formStyle = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "12px",
-};
-
-const inputStyle = {
-  padding: "10px",
-  borderRadius: "6px",
-  border: "1px solid #ccc",
-};
-
-const eyeStyle = {
-  position: "absolute",
-  right: 10,
-  top: "50%",
-  transform: "translateY(-50%)",
-  cursor: "pointer",
+const errorText = {
+  color: "red",
+  fontSize: 12,
 };
 
 const btnStyle = {
-  padding: "10px",
+  padding: 10,
   background: "#111",
   color: "#fff",
   border: "none",
-  borderRadius: "6px",
-  cursor: "pointer",
+  borderRadius: 6,
 };
 
-const switchTextStyle = {
-  textAlign: "center",
-  marginTop: "12px",
-};
-
-const linkStyle = {
-  border: "none",
-  background: "transparent",
-  color: "#2563eb",
-  cursor: "pointer",
-};
+const closeBtnStyle = { float: "right", cursor: "pointer" };
+const titleStyle = { textAlign: "center" };
+const formStyle = { display: "flex", flexDirection: "column", gap: 8 };
+const switchTextStyle = { textAlign: "center", marginTop: 10 };
+const linkStyle = { background: "none", border: "none", color: "#2563eb" };
+const eyeStyle = { position: "absolute", right: 10, top: "30%", cursor: "pointer" };
